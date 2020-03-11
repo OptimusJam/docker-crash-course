@@ -1,0 +1,57 @@
+Section 6: Docker with Java Spring Boot TODO Web App Using MySQL
+Step01: code review
+	Add MySql 
+		connector to pom.xml and change scope for H2 to test
+		datasource properties to main/application.properties: url, user, password, driver, dialect, ddl-auto => update the schema, do not delete
+	Add H2 datasource properties to test/application.properties: H2 configuration data
+	Entity -> change column name desc to description
+Step02: Running MySQL as Docker container on Local
+	Find MySQL image on docker hub -> check https://hub.docker.com/_/mysql for more info
+	Run the image: (version 5.7)
+		TIP: docker image rm <image_name>:<version> -> to remove an image
+		Command: need some environment variables: root password, configure database: name, user, password
+			docker run -d -e MYSQL_ROOT_PASSWORD=dummypass -e MYSQL_DATABASE=todos -e MYSQL_USER=todos-user -e MYSQL_PASSWORD=dummytodos -p 3306:3306 --name=mysql mysql:5.7
+				-d: Run in detach mode
+		TIP: check continers with: docker container list
+		TIP: use MySQL 
+Step03: connect Spring Boot Todo web app to MySQL on local
+	TIP: list docker containers: docker container list
+	No create table on app start
+Step04: Create Docker image for TODO web app and use Link to connect
+	TIP: stop a container: docker container stop <containe-id>
+	TIP: remove a container: docker container rm <container_name>
+	Deploy App and MySQL in containers and connect them
+	configure the pom.xml
+		Configure spotify docker plugin
+	Build the image: mvn clean package -DskipTest
+	Run the docker image of the application:
+		command: docker container run -d -p 4040:4040 <image_name => in28min/todo-web-application-mysql:0.0.1-SNAPSHOT>
+	Link error: how to solve:
+		Container deployed in bridge network (def by docker) and can't talk to each other.
+		To fix: use link option => not recomended => --link <container_name>
+		In application.properties, update variables to use environment variables: -e RDS_HOSTNAME=<container_name>
+			Notation: ${<ENV_VAR>:<def_value>}
+Step05: Exploring docker networking: HOST, BRIDGE and NONE
+	Kinds of docker networks
+		command: docker network ls
+		Types:
+			Bridge -> create a bridge, default on Docker
+			Host -> port exposes directly, not need to add -p option on docker container run => only works in linux
+			None -> no network
+	For each kind of network, inspect it:
+		command: docker inspect <network_type>
+Step06: Create a custom network
+	Command:
+		docker network create <network_name> => uses a bridge network
+	Launch mysql container and app container in this network
+	Everything in a bridge network can talk easily.
+Step07: Using docker volumes to persist data
+	TIP: to prune all the containers
+		command: docker container prune
+	TIP: check container logs
+		command: docker container logs -f <container_id>
+	To persist data between start and stop mysql container -> attach mysql container to a volume:
+		add to container run: --volume <volume-database-name>:<container_folder_data>
+		map to a folder in the container that contains the MySql data.
+
+
