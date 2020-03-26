@@ -26,6 +26,7 @@ Step04: Create Docker image for TODO web app and use Link to connect
 	Build the image: mvn clean package -DskipTest
 	Run the docker image of the application:
 		command: docker container run -d -p 4040:4040 <image_name => in28min/todo-web-application-mysql:0.0.1-SNAPSHOT>
+		Command tip: -p <Host_port>:<container_port>
 	Link error: how to solve:
 		Container deployed in bridge network (def by docker) and can't talk to each other.
 		To fix: use link option => not recomended => --link <container_name>
@@ -53,5 +54,274 @@ Step07: Using docker volumes to persist data
 	To persist data between start and stop mysql container -> attach mysql container to a volume:
 		add to container run: --volume <volume-database-name>:<container_folder_data>
 		map to a folder in the container that contains the MySql data.
+
+Section 7: Docker with Java Spring Boot React Full Stack App
+Step01: Exploring code
+	Full stack application with JWT security and react FE.
+	Update port to 9090 -> need to provide a JWT token to access
+	create a Post request 
+		Url: http://localhost:9090/authenticate
+		With body: {
+						"username":"in28minutes",
+  						"password":"dummy"
+					}
+		Get the token in the response: JWT token
+			{
+				"token": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJpbjI4bWludXRlcyIsImV4cCI6MTU4NDY5NTA2MCwiaWF0IjoxNTg0MDkwMjYwfQ.fLalfgin7QT1dx1XGTJyCO3v8SJb3TYncrK7YTxtVupzkAp7bzcE-zXOqb90kzV87eUjJfS_uOdVds1hADRhTA"
+			}
+	New request with Header -> Authorization - Bearer <TOKEN>
+Step02: running FE locally
+	To add dependencies -> command: npm install
+	To run the application -> command: npm start
+	Update to connect to local URL.
+Step03: Containerizing Java REST API Backend
+	Run both applications in container
+	For Rest Api:
+		MAven dependecy plugin: unpack to exploit dependencies
+		Inlcude docker spotify plugin.
+		Execute: mvn clean package
+		Run the image:
+			Command: docker run -p <Host_port>:<docker_port> <image> => docker run -p 9090:9090 in28min/rest-api-full-stack:0.0.1-
+		Access from the FE
+Step04: Creating multi stage docker builde for react FE code
+	Stage 1: create the package
+		npm install
+		npm run build -> create a package with the application, ready to deploy in production
+	===========================================
+	GOAL: keep your image as small as possible.
+	===========================================
+	Stage 2: run the package in Nginx server
+	Create an image to run Stage 1
+	Create an image to run Stage 2
+	Use a docker multi-stage build
+		command: docker build .
+		use AS alias for first build step
+		Use WORKDIR to set work directory
+Step05: Improve FE docker build
+	Create .dockerignore file to avoid sending certain content to the image
+	Run the npm install and run in the container
+	Execute npm install takes between 70-80 % of the build image time
+	Exclude node_modules to reduces docker image build process
+	TIP: add extra step to download the code from git
+Step06: Using multi stage Docker build for Java Rest Api BE
+	Execute docker and send the context
+		COMMAND: docker build .
+		Plugins in pom.xml 
+		It takes a certain time as first build -> download maven dependencies
+	Stage1: install maven and JDK 
+		Step1: copy pom and download dependencies -> keep them cached
+		Step2: build the project
+	Stage2: copy everything from Stage1 into tomcat file structure
+		Get everything ready
+	Nothing is done in local machine -> it does not depends on a java version
+==========================
+NOTE: with two stages build, uses docker cache to increase build speed -> first stage generate a reusable image.
+==========================
+Step07: Running Java App docker image
+	add a tag to the docker image created
+	COMMAND: docker tag <IMAGE_ID> <NEW_IMAGE_NAME>:<IMAGE_LABEL>
+		EXA: docker tag 3f47658721 in28min/rest-api-full-stack:2stagebuild
+	Run the image
+		COMMAND: docker run -p <host_port>:<docker_port> <NEW_IMAGE_NAME>
+Step08: Exploring docker compose
+	Problem that docker compose solves: manage the lifecycle of related container together -> useful for microservices
+	Check: docker compose on docker.com documents
+	use to run multi-container applications
+	use yml
+	multiple isolated environments on a single host
+	associate old container with new ones -> not data lose
+	Move composition between environments
+	Docker compose scale command:
+		docker-compose scale is now deprecated. Instead, you can use docker-compose up -d --scale servicename=3
+		Recommended Reading: https://docs.docker.com/compose/reference/scale/
+		Here is an issue highlighting the subtle difference between docker-compose scale and docker-compose up --scale
+Step09: Running full stack application with docker compose
+	Check version installed -> EXEC: docker-compose -version
+	Check code for docker compose yml file
+		Services -> applications, FE and BE
+			inside specify the dockerfile to execute
+			port to expose the app
+			depends_on
+		Networks -> to comunicate services.
+		before run, be sure images are present.
+		COMMAND: docker-compose up -d
+			(pwd: location of docker-compose.yml file)
+			-d for detach mode
+		check docker container are running and test the applications
+		check docker network is created and inspect it -> check that the containers are associates to this network
+		COMMAND: docker-compose down
+			stop all the applications.
+Step10: Using docker compose for Java Spring Boot Todo Web App
+	Add volume to save data into the host -> now the mysql image its here
+	in Service:
+		add environment variables with configuration -> it is -env on docker cli
+	docker compose is in 03-todo-web-application-mysql
+Step11: Playing with docker compose
+	docker compose commands
+		docker-compose up
+		docker-compose down
+		docker-compose events -> events happening with docker compose
+		docker-compose config -> configuration
+		docker-compose images -> images managed by docker compose
+		docker-compose ps -> containers running
+		docker-compose top -> process running
+		docker-compose pause -> pause all the containers
+		docker-compose kill -> kill the containers
+		docker-compose rm -> remove all containers
+	In the docker compose, an image can be replace for a build context -> Dockerfile location and execute order
+
+Section 8: Docker - Run Java Spring microservices.
+Step 01: Introduction to microservices
+	Concept: small units, lightweight communitacion, bussines capabilities, managing and monitorin
+		REST
+		Small well chosen deployable unit
+		Cloud enable
+Step 02: MS architecture advantages
+	New technology and process adaptation
+	Dynamic scaling
+	Faster release cycles
+Step 03: understanding docker and microservices
+	Easier development
+		Adopt new technology faster
+		fewer environment issues
+	Easier operations
+		consistent deployment automation across different environment and technologies
+Step 04: overview of springboot microservices
+	First run MS locally from IDE
+	Check readme files from project with information
+	CES: code review
+	CSS: code review
+		CurrencyExchangeService: interface to connect CES using Feign, configure URL using environment variable.
+Step 05: Create docker images and containers for springboot MS
+	Launch application as containers and talk between them
+	Dockerfiles -> EXPOSE port.
+		ENV for specific java options
+		Compatatibility options, not need in last versions.
+	Spotify docker plugin in pom
+	execute: mvn clean pacakage
+	TIP: terminal has tabs, use one for control MS and two more to build images
+	Run container for MS:
+		1.- Create a docker network to allow comunicaton between MS:
+			Execute: docker network create currency-network
+		2.- run currency exchange service
+			Execute: docker run -p 8000:8000 --network=currency-network --name=currency-exchange-service in28min/currency-exchange-service:0.0.1-SNAPSHOT
+		3.- run currency conversion service
+			Execute: docker run -p 8100:8100 --network=currency-network --name=currency-conversion-service in28min/currency-conversion-service:0.0.1-SNAPSHOT
+			Add currency exchange uri as environment variable: --env CURRENCY_EXCHANGE_URI=http://currency-exchange-service:8000
+	Use -d option for detach mode on containers. It need to remove containers -> name in use :P
+	Check logs for containers.
+Step 06: Run Java SpringBoot MS using docker compose
+	Create a docker compose file to run CCS and CES
+	Copy docker compose file from previous chapter
+		Configure the network: currency-compose-network
+		rename the services:
+			currency-exchange-service and currency-conversion-services
+		Add images to the services
+			in28min/currency-exchange-service:0.0.1-SNAPSHOT
+			in28min/currency-conversion-service:0.0.1-SNAPSHOT
+		expose ports
+			8000:8000
+			8100:8100
+		add network
+		for CCS
+			add environment variable for CURRENCY_EXCHANGE_URI:  http://currency-exchange-service:8000
+			add dependency to CES
+	Before running compose
+		stop running containers, remove and prune
+		Execute: docker-compose up
+
+Section 9: Using docker to integrate Java MS with Eureka Naming Service
+Step 01: understanding the need for service registry 
+	Naming service (Eureka): service registration and service discovery
+	Dynamic scale up and down with Eureka and Feign (Rest client, implies a load balancer (Ribbon))
+Step 02: Create Docker images for Eureka Naming Service
+	Eureka naming project:
+		Code review: add dependency and EnableEurekaServer annotation to main class
+			configuration: port, app name, register with eureka and fetch 
+			pom with spotify docker file
+	build project: mvn clean package
+	Enable Eureka client in CES and CCS (dependency and annotation)
+		config to connect to naming server: localhost vs docker service (docker container name and port in the url)
+		For CCS, feign client, remove the url, is not necesary, it will talk to service name to retrieve service by name (CES name in its application.property)
+	build CES and CCS -> new images
+	Crete a new dockercompose file with namig server
+		Service name must match with application.properties from CES and CCS
+		Configure ports, image, network
+		For CES and CCS, add depends_on naming-server
+Step 03: configure and run SpringBoot MS with Eureka service
+	to run Eureka naming service: 
+		Execute: 
+	All together with docker compose:
+		Execute: docker-compose up -d (detach mode)
+	watch logs:
+		Execute: docker-compose logs -f
+	check eureka naming service url: http://localhost:8761
+	Any change in microservice code or config (CES and CCS) requieres build image and launch docker-compose up
+	Increase number of instances of one MS:
+		Execute: docker-compose scale <MS_name>=number of instances
+		Result: error port is assigned
+		Solution: remove static port binding -> comment ports on ms to scale.
+
+Section 10: Using docker to integrate java MS with zuul API gateway
+Step 01: configure CES and CCS MS with Zuul API gateway
+	Common features in a chain of MS
+	Use API gateway to implement common features: authentication, authorization and security; Rate limits; fault tolerance; service aggregation
+	Api gateway -> Zuul
+		dependency and annotation for zuul
+		it also need enable discover client to connect to Eureka
+		CommonLogging filter -> allows to extend to manage common features
+		Intercept the request behaviour, always execute the filter
+		Filter behaviour -> overwrite tun method
+	Update MS (CES and CCS).to use Zuul
+		CCS: update feing proxy to talk to zuul gateway: change feign client and getMapping (add service name to URL)
+Step 02: Using docker compose to run MS with Zuul
+	Update docker compose, add new service for zuul
+
+Section 11: Using Docker to integrate Java SpringBoot MS with Zipkin
+Step 01: Introduction to Zipkin and update MS to connect zipkin
+	Distributed tracing across multiple MS
+	Asynchronoust approach
+	Simple log into Rabbit MQ
+	One dashboard
+	How one single request go across multiple MS
+	Each request -> one unique identifier across all MS => sleuth in all MS: add a header id on the top of the request
+	Check sleuth and rabbit dependency is added in CES, CCS and zuul
+		Update configuration sleuth sampler probability
+		configure rabbit MQ
+	Zipkin image from dockerhub.
+
+Step 02: using docker compose to launch rabbit MW, Zipkin and MSs
+	Add rabbit MQ service to docker-compose -> download from DockerHub
+		configure access and management port
+	Add zipkin server service
+		image from dockerhub -> openzipkin
+		configure ports
+		configure dependencies
+		configure environment variables for
+			storage type in memory -> not use a database
+			talk to rabbit MQ -> amqp://guest:guest@rabbitmq:5672
+	configure the MSs
+		add depends on rabbit mq and zipkin for CES, CCS and Zuul
+
+Step 03: Running RabbitMQ, Zipkin and MSs
+	
+
+Step 08: Using JIB plugin to crete docker images
+	OCI: open container iniciative (like an interface and docker is an implementation)
+	JIB configuration
+		images reproducible: images from the same code are the same, no matter when they are generated
+		analyze code and determine start point
+	Docker history: image generate from JIB has a long time ago creation time -> distroles java
+	Configuration options:
+		a lot of configuration options
+		image from, image name to, tags
+		image ports
+Step 09: Using Fabric8IO docker plugin to create docker images
+	allows external docker file and also generate one using instructions as in the docker file
+	requieres a property to the JAR file
+	specifiying docker file instructions
+
+
+
 
 
